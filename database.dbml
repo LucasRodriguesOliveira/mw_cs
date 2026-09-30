@@ -1,0 +1,196 @@
+Project MetalWorks_CatalogService {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # Metal Works - Catalog Service
+
+    Catalog Service Tables Model
+  '''
+}
+
+enum catalog.StatLabel {
+  damage
+  defense
+  block
+  magic
+}
+
+Table catalog.Category {
+  id        uuid              [pk, not null]
+  parentId  uuid              [null]
+  name      varchar(50)       [not null]
+  slug      varchar(50)       [not null, unique]
+  statLabel catalog.StatLabel [null]
+  createdAt timestamp         [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt timestamp         [null]
+  deletedAt timestamp         [null]
+
+  indexes {
+    parentId
+    deletedAt
+  }
+}
+
+Table catalog.ProductStatus {
+  id          int          [pk, not null, increment]
+  name        varchar(50)  [not null]
+  description varchar(100) [not null]
+  createdAt   timestamp    [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt   timestamp    [null]
+  deletedAt   timestamp    [null]
+
+  indexes {
+    deletedAt
+    name
+  }
+
+  note: '''
+  # Product Status
+
+  | id | name | description |
+  | --- | --- | --- |
+  | 1 | draft | Being set up, not ready yet |
+  | 2 | published | Available in the store |
+  | 3 | archived | No longer visible in the store |
+  | 4 | out_of_season | Temporarily unavailable |
+  | 5 | discontinued | No longer available, but still visible |
+  | 6 | scheduled | Will be available after a specified date |
+  '''
+}
+
+Table catalog.Product {
+  id         uuid         [pk, not null]
+  categoryId uuid         [not null]
+  name       varchar(100) [not null]
+  slug       varchar(100) [not null, unique]
+  statusId   int          [not null, default: 1]
+  createdAt  timestamp    [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt  timestamp    [null]
+  deletedAt  timestamp    [null]
+
+  indexes {
+    categoryId
+    name
+    statusId
+    deletedAt
+  }
+}
+
+Table catalog.Material {
+  id          uuid         [pk, not null]
+  name        varchar(50)  [not null]
+  description varchar(250) [not null]
+  active      boolean      [not null, default: true]
+  createdAt   timestamp    [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt   timestamp    [null]
+  deletedAt   timestamp    [null]
+
+  indexes {
+    name
+    deletedAt
+  }
+}
+
+Table catalog.ProductVariantStatus {
+  id          int          [pk, not null, increment]
+  name        varchar(50)  [not null]
+  description varchar(100) [not null]
+  createdAt   timestamp    [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt   timestamp    [null]
+  deletedAt   timestamp    [null]
+
+  indexes {
+    name
+    deletedAt
+  }
+
+  note: '''
+  # Product Variant Status
+
+  | id | name | description |
+  | --- | --- | --- |
+  | 1 | draft | Being set up, not ready yet |
+  | 2 | published | Available in the store |
+  | 3 | archived | No longer visible in the store |
+  | 4 | out_of_season | Temporarily unavailable |
+  | 5 | out_of_stock | Automatically set when no inventory is available |
+  | 6 | discontinued | No longer available, but still visible |
+  | 7 | scheduled | Will be available after a specified date |
+  '''
+}
+
+Table catalog.ProductSize {
+  id          int          [pk, not null, increment]
+  name        varchar(20)  [not null, note: 'XS, S, M, L, XL, ...']
+  label       varchar(100) [null, note: 'Extra Small, Small, Medium, Large, Extra Large, ...']
+  createdAt   timestamp    [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt   timestamp    [null]
+  deletedAt   timestamp    [null]
+
+  indexes {
+    deletedAt
+  }
+}
+
+Table catalog.ProductColor {
+  id          int          [pk, not null, increment]
+  name        varchar(20)  [not null, note: 'tomato, teal, gold, st:blue/white, coal, ...']
+  label       varchar(100) [null, note: 'Tomato, Teal, Gold, Stripped Blue and White, Coal, ...']
+  hexCode     varchar(6)   [not null, note: 'ff6347, 009193, ffd700, 1451c9, 2a2a2b']
+  createdAt   timestamp    [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt   timestamp    [null]
+  deletedAt   timestamp    [null]
+
+  indexes {
+    deletedAt
+  }
+}
+
+Table catalog.ProductVariant {
+  id         uuid           [pk, not null]
+  productId  uuid           [not null]
+  name       varchar(50)    [not null]
+  sku        varchar(100)   [not null, unique, note: '{CATEGORY}-{PRODUCT}-{VARIANT}-{SIZE}-{COLOR}']
+  materialId uuid           [not null]
+  sizeId     int            [not null]
+  colorId    int            [not null]
+  weight     decimal(14, 4) [not null]
+  power      int            [not null]
+  price      decimal(14, 4) [not null]
+  statusId   int            [not null, default: 1]
+  createdAt  timestamp      [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt  timestamp      [null]
+  deletedAt  timestamp      [null]
+
+  indexes {
+    name
+    sku
+    (productId, materialId, sizeId, colorId) [unique]
+    statusId
+    deletedAt
+  }
+}
+
+Table catalog.ProductImage {
+  id         uuid      [pk, not null]
+  productId  uuid      [not null]
+  url        text      [not null]
+  position   int       [not null]
+  createdAt  timestamp [not null, default: 'CURRENT_TIMESTAMP']
+  updatedAt  timestamp [null]
+  deletedAt  timestamp [null]
+
+  indexes {
+    productId
+    deletedAt
+  }
+}
+
+Ref "catalog.Category_catalog.Category_fk": catalog.Category.id > catalog.Category.parentId
+Ref "catalog.Category_catalog.Product_fk": catalog.Category.id > catalog.Product.categoryId
+Ref "catalog.ProductStatus_catalog.Product_fk": catalog.ProductStatus.id > catalog.Product.statusId
+Ref "catalog.Material_catalog.ProductVariant_fk": catalog.Material.id > catalog.ProductVariant.materialId
+Ref "catalog.ProductVariantStatus_catalog.ProductVariant_fk": catalog.ProductVariantStatus.id > catalog.ProductVariant.statusId
+Ref "catalog.ProductSize_catalog.ProductVariant_fk": catalog.ProductSize.id > catalog.ProductVariant.sizeId
+Ref "catalog.ProductColor_catalog.ProductVariant_fk": catalog.ProductColor.id > catalog.ProductVariant.colorId
+Ref "catalog.Product_catalog.ProductVariant_fk": catalog.Product.id > catalog.ProductVariant.productId
+Ref "catalog.Product_catalog.ProductImage_fk": catalog.Product.id > catalog.ProductImage.productId
